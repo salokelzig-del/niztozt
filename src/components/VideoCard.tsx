@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Comment, Video } from "@/data/videos";
-import { CommentIcon, HeartIcon, MusicNoteIcon, ShareIcon, StarOfDavidIcon } from "./icons";
+import {
+  CommentIcon,
+  HeartIcon,
+  MusicNoteIcon,
+  ShareIcon,
+  SpeakerOffIcon,
+  SpeakerOnIcon,
+  StarOfDavidIcon,
+} from "./icons";
 import CommentsSheet from "./CommentsSheet";
+import { getLikedVideoIds, setVideoLiked } from "@/lib/localUser";
 
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
@@ -15,31 +24,98 @@ export default function VideoCard({ video }: { video: Video }) {
   const [likeCount, setLikeCount] = useState(video.likes);
   const [comments, setComments] = useState<Comment[]>(video.comments);
   const [showComments, setShowComments] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
-  function toggleLike() {
-    setLikeCount((c) => (liked ? c - 1 : c + 1));
-    setLiked(!liked);
+  useEffect(() => {
+    setLiked(getLikedVideoIds().includes(video.id));
+  }, [video.id]);
+
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    const sectionEl = sectionRef.current;
+    if (!videoEl || !sectionEl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          videoEl.play().catch(() => {});
+        } else {
+          videoEl.pause();
+        }
+      },
+      { threshold: 0.6 }
+    );
+    observer.observe(sectionEl);
+    return () => observer.disconnect();
+  }, []);
+
+  async function toggleLike() {
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikeCount((c) => (nextLiked ? c + 1 : c - 1));
+    setVideoLiked(video.id, nextLiked);
+    try {
+      await fetch(`/api/videos/${video.id}/like`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ liked: nextLiked }),
+      });
+    } catch {
+      // Simplificación: si falla la red, el contador local queda desincronizado
+      // hasta la próxima recarga. No hay reintento automático.
+    }
   }
 
-  function addComment(text: string) {
-    setComments((prev) => [
-      ...prev,
-      { id: `${video.id}-${prev.length}-${Date.now()}`, user: "Vos", text },
-    ]);
+  async function addComment(user: string, text: string) {
+    const res = await fetch(`/api/videos/${video.id}/comments`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ user, text }),
+    });
+    if (!res.ok) return;
+    const comment: Comment = await res.json();
+    setComments((prev) => [...prev, comment]);
   }
 
   return (
-    <section className="relative h-screen w-full shrink-0 snap-start snap-always overflow-hidden">
-      <div className={`absolute inset-0 bg-gradient-to-br ${video.gradient}`}>
-        <div className="absolute inset-0 flex items-center justify-center text-white/5">
-          <StarOfDavidIcon className="h-72 w-72" />
+    <section
+      ref={sectionRef}
+      className="relative h-screen w-full shrink-0 snap-start snap-always overflow-hidden"
+    >
+      {video.videoUrl ? (
+        <video
+          ref={videoRef}
+          src={video.videoUrl}
+          className="absolute inset-0 h-full w-full object-cover"
+          loop
+          muted={muted}
+          playsInline
+          onClick={() => setMuted((m) => !m)}
+        />
+      ) : (
+        <div className={`absolute inset-0 bg-gradient-to-br ${video.gradient}`}>
+          <div className="absolute inset-0 flex items-center justify-center text-white/5">
+            <StarOfDavidIcon className="h-72 w-72" />
+          </div>
         </div>
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-black/50" />
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-black/50" />
 
       <span className="absolute left-4 top-20 rounded-full border border-amber-400/40 bg-black/30 px-3 py-1 text-xs font-medium text-amber-300 backdrop-blur-sm">
         {video.category}
       </span>
+
+      {video.videoUrl && (
+        <button
+          onClick={() => setMuted((m) => !m)}
+          aria-label={muted ? "Activar sonido" : "Silenciar"}
+          className="absolute right-4 top-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm"
+        >
+          {muted ? <SpeakerOffIcon className="h-5 w-5" /> : <SpeakerOnIcon className="h-5 w-5" />}
+        </button>
+      )}
 
       <div className="absolute right-3 bottom-32 flex flex-col items-center gap-6">
         <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-amber-400 bg-gradient-to-br from-blue-700 to-blue-950 text-sm font-bold text-white">

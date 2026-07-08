@@ -113,6 +113,38 @@ export function CloseIcon({ className }: IconProps) {
   );
 }
 
+export function SpeakerOnIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.25 5.25 6 9H2.25v6H6l5.25 3.75V5.25ZM16.5 8.25a5.25 5.25 0 010 7.5M19.5 5.25a9.75 9.75 0 010 13.5"
+      />
+    </svg>
+  );
+}
+
+export function SpeakerOffIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.25 5.25 6 9H2.25v6H6l5.25 3.75V5.25ZM17.25 9.75l4.5 4.5m0-4.5-4.5 4.5"
+      />
+    </svg>
+  );
+}
+
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  );
+}
+
 export function StarOfDavidIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.2} className={className}>

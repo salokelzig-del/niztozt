@@ -1,5 +1,5 @@
 import Feed from "@/components/Feed";
-import BottomNav from "@/components/BottomNav";
+import AppShell from "@/components/AppShell";
 
 export default function Home() {
   return (
@@ -14,8 +14,9 @@ export default function Home() {
           Nitzotz
         </span>
       </div>
-      <Feed />
-      <BottomNav />
+      <AppShell>
+        <Feed />
+      </AppShell>
     </main>
   );
 }

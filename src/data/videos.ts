@@ -15,9 +15,10 @@ export type Video = {
   category: string;
   likes: number;
   comments: Comment[];
+  videoUrl?: string;
 };
 
-export const videos: Video[] = [
+export const SEED_VIDEOS: Video[] = [
   {
     id: "1",
     user: "Yael Cohen",
