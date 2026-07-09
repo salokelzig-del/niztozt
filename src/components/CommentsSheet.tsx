@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useUser } from "@clerk/nextjs";
 import type { Comment } from "@/data/videos";
 import { CloseIcon } from "./icons";
-import { getLocalUserName, setLocalUserName } from "@/lib/localUser";
 
 type CommentsSheetProps = {
   open: boolean;
   onClose: () => void;
   comments: Comment[];
-  onAddComment: (user: string, text: string) => void | Promise<void>;
+  onAddComment: (text: string) => void | Promise<void>;
 };
 
 export default function CommentsSheet({
@@ -19,24 +19,21 @@ export default function CommentsSheet({
   comments,
   onAddComment,
 }: CommentsSheetProps) {
+  const { isSignedIn } = useUser();
   const [text, setText] = useState("");
-  const [name, setName] = useState("");
   const [mounted, setMounted] = useState(false);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setName(getLocalUserName());
   }, []);
 
   async function submit() {
     const trimmedText = text.trim();
-    const trimmedName = name.trim();
-    if (!trimmedText || !trimmedName || sending) return;
+    if (!trimmedText || sending) return;
     setSending(true);
-    setLocalUserName(trimmedName);
     try {
-      await onAddComment(trimmedName, trimmedText);
+      await onAddComment(trimmedText);
       setText("");
     } finally {
       setSending(false);
@@ -89,15 +86,8 @@ export default function CommentsSheet({
           ))}
         </div>
 
-        <div className="space-y-2 border-t border-white/10 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Tu nombre"
-            maxLength={30}
-            className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white placeholder:text-white/40 focus:border-amber-400/50 focus:outline-none"
-          />
-          <div className="flex items-center gap-2">
+        {isSignedIn ? (
+          <div className="flex items-center gap-2 border-t border-white/10 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -107,13 +97,17 @@ export default function CommentsSheet({
             />
             <button
               onClick={submit}
-              disabled={sending || !text.trim() || !name.trim()}
+              disabled={sending || !text.trim()}
               className="rounded-full bg-gradient-to-br from-amber-400 to-blue-600 px-4 py-2 text-sm font-semibold text-black disabled:opacity-40"
             >
               {sending ? "..." : "Enviar"}
             </button>
           </div>
-        </div>
+        ) : (
+          <p className="border-t border-white/10 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] text-center text-sm text-white/50">
+            Iniciá sesión para comentar
+          </p>
+        )}
       </div>
     </>,
     document.body

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useClerk, useUser } from "@clerk/nextjs";
 import type { Comment, Video } from "@/data/videos";
 import {
   CommentIcon,
@@ -12,25 +13,28 @@ import {
   StarOfDavidIcon,
 } from "./icons";
 import CommentsSheet from "./CommentsSheet";
-import { getLikedVideoIds, setVideoLiked } from "@/lib/localUser";
 
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
   return `${n}`;
 }
 
-export default function VideoCard({ video }: { video: Video }) {
-  const [liked, setLiked] = useState(false);
+export default function VideoCard({
+  video,
+  initialLiked,
+}: {
+  video: Video;
+  initialLiked: boolean;
+}) {
+  const { isSignedIn } = useUser();
+  const clerk = useClerk();
+  const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(video.likes);
   const [comments, setComments] = useState<Comment[]>(video.comments);
   const [showComments, setShowComments] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    setLiked(getLikedVideoIds().includes(video.id));
-  }, [video.id]);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -52,10 +56,13 @@ export default function VideoCard({ video }: { video: Video }) {
   }, []);
 
   async function toggleLike() {
+    if (!isSignedIn) {
+      clerk.openSignIn({});
+      return;
+    }
     const nextLiked = !liked;
     setLiked(nextLiked);
     setLikeCount((c) => (nextLiked ? c + 1 : c - 1));
-    setVideoLiked(video.id, nextLiked);
     try {
       await fetch(`/api/videos/${video.id}/like`, {
         method: "POST",
@@ -68,11 +75,19 @@ export default function VideoCard({ video }: { video: Video }) {
     }
   }
 
-  async function addComment(user: string, text: string) {
+  function openComments() {
+    if (!isSignedIn) {
+      clerk.openSignIn({});
+      return;
+    }
+    setShowComments(true);
+  }
+
+  async function addComment(text: string) {
     const res = await fetch(`/api/videos/${video.id}/comments`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ user, text }),
+      body: JSON.stringify({ text }),
     });
     if (!res.ok) return;
     const comment: Comment = await res.json();
@@ -135,7 +150,7 @@ export default function VideoCard({ video }: { video: Video }) {
         </button>
 
         <button
-          onClick={() => setShowComments(true)}
+          onClick={openComments}
           className="flex flex-col items-center gap-1"
           aria-label="Comentarios"
         >

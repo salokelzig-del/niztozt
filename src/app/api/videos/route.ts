@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { createVideo } from "@/lib/redis";
+import { getAuthedDisplayUser } from "@/lib/authUser";
 
 export async function POST(request: Request) {
+  const authedUser = await getAuthedDisplayUser();
+  if (!authedUser) {
+    return NextResponse.json({ error: "Necesitás iniciar sesión" }, { status: 401 });
+  }
+
   const body = await request.json();
-  const { user, description, category, hashtags, videoUrl } = body;
+  const { description, category, hashtags, videoUrl } = body;
 
   if (
-    typeof user !== "string" ||
-    !user.trim() ||
     typeof description !== "string" ||
     !description.trim() ||
     typeof category !== "string" ||
@@ -18,11 +22,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }
 
-  const handle = `@${user.trim().toLowerCase().replace(/\s+/g, "_")}`;
-
   const video = await createVideo({
-    user: user.trim(),
-    handle,
+    user: authedUser.name,
+    handle: authedUser.handle,
     description: description.trim(),
     category: category.trim(),
     hashtags: Array.isArray(hashtags)

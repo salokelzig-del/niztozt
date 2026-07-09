@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { uploadPresigned } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { CloseIcon } from "./icons";
-import { getLocalUserName, setLocalUserName } from "@/lib/localUser";
 
 const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
@@ -16,9 +16,9 @@ type UploadModalProps = {
 
 export default function UploadModal({ open, onClose }: UploadModalProps) {
   const router = useRouter();
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [hashtags, setHashtags] = useState("");
@@ -29,7 +29,6 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
 
   useEffect(() => {
     setMounted(true);
-    setName(getLocalUserName());
   }, []);
 
   useEffect(() => {
@@ -59,12 +58,11 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
   }
 
   async function handleSubmit() {
-    if (!file || !name.trim() || !description.trim() || !category.trim()) {
+    if (!file || !description.trim() || !category.trim()) {
       setError("Completá todos los campos y elegí un video.");
       return;
     }
     setError("");
-    setLocalUserName(name.trim());
 
     try {
       setStatus("uploading");
@@ -83,7 +81,6 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          user: name.trim(),
           description: description.trim(),
           category: category.trim(),
           hashtags: hashtags
@@ -148,17 +145,12 @@ export default function UploadModal({ open, onClose }: UploadModalProps) {
             )}
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-white/60">Tu nombre</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={30}
-              disabled={isBusy}
-              placeholder="Ej: Yael Cohen"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-amber-400/50 focus:outline-none"
-            />
-          </div>
+          <p className="text-xs text-white/50">
+            Publicando como{" "}
+            <span className="font-semibold text-amber-300">
+              {user?.fullName || user?.username || "vos"}
+            </span>
+          </p>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-white/60">Descripción</label>

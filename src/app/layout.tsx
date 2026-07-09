@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
+import { esES } from "@clerk/localizations";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,11 +25,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+    <ClerkProvider
+      localization={esES}
+      appearance={{
+        variables: {
+          colorPrimary: "#d4af37",
+          colorBackground: "#0d0f16",
+          colorForeground: "#f5f5f5",
+          colorInput: "#1a1d27",
+          colorInputForeground: "#f5f5f5",
+        },
+      }}
     >
-      <body className="min-h-full flex flex-col bg-black text-white">{children}</body>
-    </html>
+      <html
+        lang="es"
+        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      >
+        <body className="min-h-full flex flex-col bg-black text-white">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

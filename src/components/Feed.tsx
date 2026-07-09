@@ -1,10 +1,16 @@
-import { getFeedVideos } from "@/lib/redis";
+import { auth } from "@clerk/nextjs/server";
+import { getFeedVideos, getLikedVideoIdsForUser } from "@/lib/redis";
 import VideoCard from "./VideoCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function Feed() {
-  const videos = await getFeedVideos();
+  const { userId } = await auth();
+  const [videos, likedIds] = await Promise.all([
+    getFeedVideos(),
+    userId ? getLikedVideoIdsForUser(userId) : Promise.resolve([]),
+  ]);
+  const likedSet = new Set(likedIds);
 
   if (videos.length === 0) {
     return (
@@ -18,7 +24,7 @@ export default async function Feed() {
   return (
     <div className="no-scrollbar h-screen w-full snap-y snap-mandatory overflow-y-scroll bg-black">
       {videos.map((video) => (
-        <VideoCard key={video.id} video={video} />
+        <VideoCard key={video.id} video={video} initialLiked={likedSet.has(video.id)} />
       ))}
     </div>
   );

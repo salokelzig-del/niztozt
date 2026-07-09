@@ -6,6 +6,7 @@ const redis = Redis.fromEnv();
 const VIDEO_IDS_KEY = "nitzotz:video_ids";
 const videoKey = (id: string) => `nitzotz:video:${id}`;
 const commentsKey = (id: string) => `nitzotz:video:${id}:comments`;
+const likedByUserKey = (userId: string) => `nitzotz:user:${userId}:liked`;
 
 const GRADIENTS = [
   "from-blue-950 via-slate-900 to-amber-900",
@@ -108,8 +109,26 @@ export async function createVideo(input: {
   return { id, ...meta, comments: [] };
 }
 
-export async function likeVideo(id: string, delta: 1 | -1): Promise<number> {
-  return redis.hincrby(videoKey(id), "likes", delta);
+export async function getLikedVideoIdsForUser(userId: string): Promise<string[]> {
+  return redis.smembers(likedByUserKey(userId));
+}
+
+export async function setVideoLikedByUser(
+  id: string,
+  userId: string,
+  liked: boolean
+): Promise<number> {
+  const alreadyLiked = await redis.sismember(likedByUserKey(userId), id);
+  if (liked && !alreadyLiked) {
+    await redis.sadd(likedByUserKey(userId), id);
+    return redis.hincrby(videoKey(id), "likes", 1);
+  }
+  if (!liked && alreadyLiked) {
+    await redis.srem(likedByUserKey(userId), id);
+    return redis.hincrby(videoKey(id), "likes", -1);
+  }
+  const meta = await redis.hget<number>(videoKey(id), "likes");
+  return meta || 0;
 }
 
 export async function addComment(
