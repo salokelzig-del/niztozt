@@ -34,6 +34,13 @@ export default function RootLayout({
           colorForeground: "#f5f5f5",
           colorInput: "#1a1d27",
           colorInputForeground: "#f5f5f5",
+          colorMutedForeground: "#f5f5f5",
+        },
+        elements: {
+          socialButtonsBlockButtonText: { color: "#ffffff" },
+          userButtonPopoverActionButton: { color: "#ffffff" },
+          userButtonPopoverActionButtonIcon: { color: "#ffffff" },
+          userButtonPopoverFooterPagesLink: { color: "#f5f5f5" },
         },
       }}
     >
