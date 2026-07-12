@@ -1,8 +1,8 @@
-import Feed from "@/components/Feed";
+import FollowingFeed from "@/components/FollowingFeed";
 import AppShell from "@/components/AppShell";
 import FeedTabs from "@/components/FeedTabs";
 
-export default function Home() {
+export default function SiguiendoPage() {
   return (
     <main className="relative h-screen w-full overflow-hidden bg-black">
       <FeedTabs />
@@ -13,7 +13,7 @@ export default function Home() {
         </span>
       </div>
       <AppShell>
-        <Feed />
+        <FollowingFeed />
       </AppShell>
     </main>
   );

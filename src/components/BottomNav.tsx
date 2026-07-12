@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Show, UserButton, useClerk, useUser } from "@clerk/nextjs";
 import { deriveHandle, handleToSlug } from "@/lib/handle";
 import { HomeIcon, InboxIcon, PlusIcon, ProfileIcon, SearchIcon } from "./icons";
@@ -8,6 +9,8 @@ import { HomeIcon, InboxIcon, PlusIcon, ProfileIcon, SearchIcon } from "./icons"
 export default function BottomNav({ onUploadClick }: { onUploadClick: () => void }) {
   const clerk = useClerk();
   const { user } = useUser();
+  const pathname = usePathname();
+  const isHome = pathname === "/" || pathname === "/siguiendo";
 
   const ownHandle = user
     ? handleToSlug(
@@ -22,7 +25,9 @@ export default function BottomNav({ onUploadClick }: { onUploadClick: () => void
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-white/10 bg-black/40 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur-sm">
       <Link
         href="/"
-        className="pointer-events-auto flex flex-col items-center gap-0.5 text-amber-400"
+        className={`pointer-events-auto flex flex-col items-center gap-0.5 ${
+          isHome ? "text-amber-400" : "text-white/60"
+        }`}
       >
         <HomeIcon className="h-6 w-6" />
         <span className="text-[10px] font-medium">Inicio</span>

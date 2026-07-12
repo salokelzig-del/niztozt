@@ -10,6 +10,8 @@ const commentsKey = (id: string) => `nitzotz:video:${id}:comments`;
 const likedByUserKey = (userId: string) => `nitzotz:user:${userId}:liked`;
 const userVideosKey = (userId: string) => `nitzotz:user:${userId}:videos`;
 const handleOwnerKey = (handleSlug: string) => `nitzotz:handle:${handleSlug}`;
+const followingKey = (userId: string) => `nitzotz:user:${userId}:following`;
+const followersKey = (userId: string) => `nitzotz:user:${userId}:followers`;
 
 const GRADIENTS = [
   "from-blue-950 via-slate-900 to-amber-900",
@@ -63,6 +65,7 @@ async function hydrateVideos(ids: string[]): Promise<Video[]> {
       videoUrl: meta.videoUrl || undefined,
       likes: Number(meta.likes || 0),
       comments,
+      userId: meta.userId,
     });
   }
   return out;
@@ -150,6 +153,41 @@ export async function setVideoLikedByUser(
   }
   const meta = await redis.hget<number>(videoKey(id), "likes");
   return meta || 0;
+}
+
+export async function isFollowing(followerId: string, targetUserId: string): Promise<boolean> {
+  return Boolean(await redis.sismember(followingKey(followerId), targetUserId));
+}
+
+export async function getFollowingIds(userId: string): Promise<string[]> {
+  return redis.smembers(followingKey(userId));
+}
+
+export async function getFollowerCount(userId: string): Promise<number> {
+  return redis.scard(followersKey(userId));
+}
+
+export async function setFollowing(
+  followerId: string,
+  targetUserId: string,
+  follow: boolean
+): Promise<number> {
+  const already = await redis.sismember(followingKey(followerId), targetUserId);
+  if (follow && !already) {
+    await redis.sadd(followingKey(followerId), targetUserId);
+    await redis.sadd(followersKey(targetUserId), followerId);
+  } else if (!follow && already) {
+    await redis.srem(followingKey(followerId), targetUserId);
+    await redis.srem(followersKey(targetUserId), followerId);
+  }
+  return getFollowerCount(targetUserId);
+}
+
+export async function getFollowingFeedVideos(viewerUserId: string): Promise<Video[]> {
+  const followingIds = new Set(await getFollowingIds(viewerUserId));
+  if (followingIds.size === 0) return [];
+  const all = await getFeedVideos();
+  return all.filter((v) => v.userId && followingIds.has(v.userId));
 }
 
 export async function addComment(

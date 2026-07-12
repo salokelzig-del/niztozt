@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
-import { getUserIdByHandle, getVideosByUserId, getLikedVideoIdsForUser } from "@/lib/redis";
+import {
+  getUserIdByHandle,
+  getVideosByUserId,
+  getLikedVideoIdsForUser,
+  getFollowerCount,
+  isFollowing,
+} from "@/lib/redis";
 import { ArrowLeftIcon } from "@/components/icons";
 import AppShell from "@/components/AppShell";
 import VideoCard from "@/components/VideoCard";
+import FollowButton from "@/components/FollowButton";
 
 export const dynamic = "force-dynamic";
 
@@ -16,23 +23,36 @@ export default async function ProfilePage({
   const authorUserId = await getUserIdByHandle(handle);
 
   const { userId: viewerId } = await auth();
-  const [videos, likedIds] = await Promise.all([
+  const [videos, likedIds, followerCount, viewerIsFollowing] = await Promise.all([
     authorUserId ? getVideosByUserId(authorUserId) : Promise.resolve([]),
     viewerId ? getLikedVideoIdsForUser(viewerId) : Promise.resolve([]),
+    authorUserId ? getFollowerCount(authorUserId) : Promise.resolve(0),
+    authorUserId && viewerId ? isFollowing(viewerId, authorUserId) : Promise.resolve(false),
   ]);
   const likedSet = new Set(likedIds);
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-black">
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-30 flex items-center gap-3 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
-        <Link
-          href="/"
-          aria-label="Volver"
-          className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white"
-        >
-          <ArrowLeftIcon className="h-5 w-5" />
-        </Link>
-        <p className="text-base font-bold text-white">@{handle}</p>
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            aria-label="Volver"
+            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+          </Link>
+          <p className="text-base font-bold text-white">@{handle}</p>
+        </div>
+        {authorUserId && (
+          <div className="pointer-events-auto">
+            <FollowButton
+              targetUserId={authorUserId}
+              initialFollowing={viewerIsFollowing}
+              initialFollowerCount={followerCount}
+            />
+          </div>
+        )}
       </header>
 
       {videos.length === 0 ? (
