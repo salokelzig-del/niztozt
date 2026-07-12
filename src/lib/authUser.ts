@@ -5,6 +5,7 @@ export async function getAuthedDisplayUser(): Promise<{
   userId: string;
   name: string;
   handle: string;
+  isAdmin: boolean;
 } | null> {
   const user = await currentUser();
   if (!user) return null;
@@ -16,5 +17,12 @@ export async function getAuthedDisplayUser(): Promise<{
     "Usuario";
   const handle = deriveHandle(name, user.username);
 
-  return { userId: user.id, name, handle };
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const userEmails = user.emailAddresses.map((e) => e.emailAddress.toLowerCase());
+  const isAdmin = userEmails.some((e) => adminEmails.includes(e));
+
+  return { userId: user.id, name, handle, isAdmin };
 }

@@ -4,9 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Show, UserButton, useClerk, useUser } from "@clerk/nextjs";
 import { deriveHandle, handleToSlug } from "@/lib/handle";
-import { HomeIcon, InboxIcon, PlusIcon, ProfileIcon, SearchIcon } from "./icons";
+import {
+  HomeIcon,
+  InboxIcon,
+  PlusIcon,
+  ProfileIcon,
+  SearchIcon,
+  ShieldIcon,
+} from "./icons";
 
-export default function BottomNav({ onUploadClick }: { onUploadClick: () => void }) {
+export default function BottomNav({
+  onUploadClick,
+  isAdmin = false,
+}: {
+  onUploadClick: () => void;
+  isAdmin?: boolean;
+}) {
   const clerk = useClerk();
   const { user } = useUser();
   const pathname = usePathname();
@@ -60,6 +73,13 @@ export default function BottomNav({ onUploadClick }: { onUploadClick: () => void
                 href={ownHandle ? `/perfil/${ownHandle}` : "/"}
                 labelIcon={<ProfileIcon className="h-4 w-4" />}
               />
+              {isAdmin ? (
+                <UserButton.Link
+                  label="Moderación"
+                  href="/moderacion"
+                  labelIcon={<ShieldIcon className="h-4 w-4" />}
+                />
+              ) : null}
             </UserButton.MenuItems>
           </UserButton>
           <span className="text-[10px] font-medium">Perfil</span>

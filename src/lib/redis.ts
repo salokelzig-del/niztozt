@@ -12,6 +12,9 @@ const userVideosKey = (userId: string) => `nitzotz:user:${userId}:videos`;
 const handleOwnerKey = (handleSlug: string) => `nitzotz:handle:${handleSlug}`;
 const followingKey = (userId: string) => `nitzotz:user:${userId}:following`;
 const followersKey = (userId: string) => `nitzotz:user:${userId}:followers`;
+const profileKey = (userId: string) => `nitzotz:user:${userId}:profile`;
+const reportsKey = (id: string) => `nitzotz:video:${id}:reports`;
+const REPORTED_VIDEOS_KEY = "nitzotz:reported_videos";
 
 const GRADIENTS = [
   "from-blue-950 via-slate-900 to-amber-900",
@@ -201,4 +204,85 @@ export async function addComment(
   };
   await redis.rpush(commentsKey(id), comment);
   return comment;
+}
+
+export async function getVideoMeta(
+  id: string
+): Promise<{ userId?: string; videoUrl?: string } | null> {
+  const meta = await redis.hgetall<{ userId?: string; videoUrl?: string }>(videoKey(id));
+  return meta;
+}
+
+export async function deleteVideo(id: string): Promise<void> {
+  const meta = await redis.hgetall<StoredVideoMeta>(videoKey(id));
+  await redis.lrem(VIDEO_IDS_KEY, 0, id);
+  await redis.del(videoKey(id));
+  await redis.del(commentsKey(id));
+  await redis.del(reportsKey(id));
+  await redis.srem(REPORTED_VIDEOS_KEY, id);
+  if (meta?.userId) {
+    await redis.lrem(userVideosKey(meta.userId), 0, id);
+  }
+}
+
+export async function reportVideo(id: string, reporterId: string): Promise<number> {
+  await redis.sadd(reportsKey(id), reporterId);
+  await redis.sadd(REPORTED_VIDEOS_KEY, id);
+  return redis.scard(reportsKey(id));
+}
+
+export async function clearReports(id: string): Promise<void> {
+  await redis.del(reportsKey(id));
+  await redis.srem(REPORTED_VIDEOS_KEY, id);
+}
+
+export async function getReportedVideos(): Promise<
+  { video: Video; reportCount: number }[]
+> {
+  const ids = await redis.smembers(REPORTED_VIDEOS_KEY);
+  if (ids.length === 0) return [];
+  const videos = await hydrateVideos(ids);
+  const out: { video: Video; reportCount: number }[] = [];
+  for (const video of videos) {
+    const reportCount = await redis.scard(reportsKey(video.id));
+    out.push({ video, reportCount });
+  }
+  return out;
+}
+
+export async function syncUserProfile(input: {
+  userId: string;
+  name: string;
+  handle: string;
+}): Promise<{ changed: boolean }> {
+  const stored = await redis.hgetall<{ name: string; handle: string }>(
+    profileKey(input.userId)
+  );
+  if (stored && stored.name === input.name && stored.handle === input.handle) {
+    return { changed: false };
+  }
+
+  await redis.hset(profileKey(input.userId), {
+    name: input.name,
+    handle: input.handle,
+  });
+
+  const newSlug = handleToSlug(input.handle);
+  if (stored?.handle) {
+    const oldSlug = handleToSlug(stored.handle);
+    if (oldSlug !== newSlug) {
+      await redis.del(handleOwnerKey(oldSlug));
+    }
+  }
+  await redis.set(handleOwnerKey(newSlug), input.userId);
+
+  const videoIds = await redis.lrange<string>(userVideosKey(input.userId), 0, -1);
+  for (const id of videoIds) {
+    await redis.hset(videoKey(id), {
+      user: input.name,
+      handle: input.handle,
+      music: `Sonido original - ${input.name}`,
+    });
+  }
+  return { changed: true };
 }

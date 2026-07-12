@@ -2,17 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import type { Comment, Video } from "@/data/videos";
 import { handleToSlug } from "@/lib/handle";
 import {
   CommentIcon,
+  FlagIcon,
   HeartIcon,
   MusicNoteIcon,
   ShareIcon,
   SpeakerOffIcon,
   SpeakerOnIcon,
   StarOfDavidIcon,
+  TrashIcon,
 } from "./icons";
 import CommentsSheet from "./CommentsSheet";
 
@@ -28,15 +31,20 @@ export default function VideoCard({
   video: Video;
   initialLiked: boolean;
 }) {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const clerk = useClerk();
+  const router = useRouter();
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(video.likes);
   const [comments, setComments] = useState<Comment[]>(video.comments);
   const [showComments, setShowComments] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [reported, setReported] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+
+  const isOwner = Boolean(user && video.userId && user.id === video.userId);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -94,6 +102,39 @@ export default function VideoCard({
     if (!res.ok) return;
     const comment: Comment = await res.json();
     setComments((prev) => [...prev, comment]);
+  }
+
+  async function handleDelete() {
+    if (deleting) return;
+    const confirmed = window.confirm(
+      "¿Seguro que querés borrar este video? No se puede deshacer."
+    );
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/videos/${video.id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        setDeleting(false);
+      }
+    } catch {
+      setDeleting(false);
+    }
+  }
+
+  async function handleReport() {
+    if (!isSignedIn) {
+      clerk.openSignIn({});
+      return;
+    }
+    if (reported) return;
+    setReported(true);
+    try {
+      await fetch(`/api/videos/${video.id}/report`, { method: "POST" });
+    } catch {
+      setReported(false);
+    }
   }
 
   return (
@@ -168,6 +209,34 @@ export default function VideoCard({
           <ShareIcon className="h-8 w-8 text-white" />
           <span className="text-xs font-semibold text-white">Compartir</span>
         </button>
+
+        {isOwner ? (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex flex-col items-center gap-1 disabled:opacity-50"
+            aria-label="Borrar video"
+          >
+            <TrashIcon className="h-7 w-7 text-red-400" />
+            <span className="text-xs font-semibold text-white">
+              {deleting ? "..." : "Borrar"}
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={handleReport}
+            disabled={reported}
+            className="flex flex-col items-center gap-1"
+            aria-label="Reportar video"
+          >
+            <FlagIcon
+              className={`h-7 w-7 ${reported ? "text-amber-400" : "text-white/70"}`}
+            />
+            <span className="text-xs font-semibold text-white">
+              {reported ? "Reportado" : "Reportar"}
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="absolute bottom-24 left-4 right-24 text-white">
