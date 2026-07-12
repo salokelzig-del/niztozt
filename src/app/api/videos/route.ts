@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   }
 
   const video = await createVideo({
+    userId: authedUser.userId,
     user: authedUser.name,
     handle: authedUser.handle,
     description: description.trim(),

@@ -1,4 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
+import { deriveHandle } from "./handle";
 
 export async function getAuthedDisplayUser(): Promise<{
   userId: string;
@@ -13,8 +14,7 @@ export async function getAuthedDisplayUser(): Promise<{
     user.username ||
     user.primaryEmailAddress?.emailAddress ||
     "Usuario";
-  const handleBase = user.username || name;
-  const handle = `@${handleBase.trim().toLowerCase().replace(/\s+/g, "_")}`;
+  const handle = deriveHandle(name, user.username);
 
   return { userId: user.id, name, handle };
 }

@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import type { Comment, Video } from "@/data/videos";
+import { handleToSlug } from "./handle";
 
 const redis = Redis.fromEnv();
 
@@ -7,6 +8,8 @@ const VIDEO_IDS_KEY = "nitzotz:video_ids";
 const videoKey = (id: string) => `nitzotz:video:${id}`;
 const commentsKey = (id: string) => `nitzotz:video:${id}:comments`;
 const likedByUserKey = (userId: string) => `nitzotz:user:${userId}:liked`;
+const userVideosKey = (userId: string) => `nitzotz:user:${userId}:videos`;
+const handleOwnerKey = (handleSlug: string) => `nitzotz:handle:${handleSlug}`;
 
 const GRADIENTS = [
   "from-blue-950 via-slate-900 to-amber-900",
@@ -30,10 +33,10 @@ type StoredVideoMeta = {
   category: string;
   videoUrl: string;
   likes: number;
+  userId?: string;
 };
 
-export async function getFeedVideos(): Promise<Video[]> {
-  const ids = await redis.lrange<string>(VIDEO_IDS_KEY, 0, -1);
+async function hydrateVideos(ids: string[]): Promise<Video[]> {
   if (ids.length === 0) return [];
 
   const pipeline = redis.pipeline();
@@ -65,6 +68,20 @@ export async function getFeedVideos(): Promise<Video[]> {
   return out;
 }
 
+export async function getFeedVideos(): Promise<Video[]> {
+  const ids = await redis.lrange<string>(VIDEO_IDS_KEY, 0, -1);
+  return hydrateVideos(ids);
+}
+
+export async function getVideosByUserId(userId: string): Promise<Video[]> {
+  const ids = await redis.lrange<string>(userVideosKey(userId), 0, -1);
+  return hydrateVideos(ids);
+}
+
+export async function getUserIdByHandle(handleSlug: string): Promise<string | null> {
+  return redis.get<string>(handleOwnerKey(handleSlug));
+}
+
 export async function seedVideo(video: Video): Promise<void> {
   const meta: StoredVideoMeta = {
     user: video.user,
@@ -85,6 +102,7 @@ export async function seedVideo(video: Video): Promise<void> {
 }
 
 export async function createVideo(input: {
+  userId: string;
   user: string;
   handle: string;
   description: string;
@@ -103,9 +121,12 @@ export async function createVideo(input: {
     category: input.category,
     videoUrl: input.videoUrl,
     likes: 0,
+    userId: input.userId,
   };
   await redis.hset(videoKey(id), meta);
   await redis.lpush(VIDEO_IDS_KEY, id);
+  await redis.lpush(userVideosKey(input.userId), id);
+  await redis.set(handleOwnerKey(handleToSlug(input.handle)), input.userId);
   return { id, ...meta, comments: [] };
 }
 

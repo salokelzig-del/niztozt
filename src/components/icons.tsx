@@ -2,6 +2,14 @@ type IconProps = {
   className?: string;
 };
 
+export function ArrowLeftIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+    </svg>
+  );
+}
+
 export function HeartIcon({ className, filled }: IconProps & { filled?: boolean }) {
   if (filled) {
     return (

@@ -1,17 +1,32 @@
 "use client";
 
-import { Show, UserButton, useClerk } from "@clerk/nextjs";
+import Link from "next/link";
+import { Show, UserButton, useClerk, useUser } from "@clerk/nextjs";
+import { deriveHandle, handleToSlug } from "@/lib/handle";
 import { HomeIcon, InboxIcon, PlusIcon, ProfileIcon, SearchIcon } from "./icons";
 
 export default function BottomNav({ onUploadClick }: { onUploadClick: () => void }) {
   const clerk = useClerk();
+  const { user } = useUser();
+
+  const ownHandle = user
+    ? handleToSlug(
+        deriveHandle(
+          user.fullName || user.username || user.primaryEmailAddress?.emailAddress || "Usuario",
+          user.username
+        )
+      )
+    : null;
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-white/10 bg-black/40 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur-sm">
-      <div className="pointer-events-auto flex flex-col items-center gap-0.5 text-amber-400">
+      <Link
+        href="/"
+        className="pointer-events-auto flex flex-col items-center gap-0.5 text-amber-400"
+      >
         <HomeIcon className="h-6 w-6" />
         <span className="text-[10px] font-medium">Inicio</span>
-      </div>
+      </Link>
       <div className="pointer-events-auto flex flex-col items-center gap-0.5 text-white/60">
         <SearchIcon className="h-6 w-6" />
         <span className="text-[10px] font-medium">Descubrir</span>
@@ -33,7 +48,15 @@ export default function BottomNav({ onUploadClick }: { onUploadClick: () => void
             appearance={{
               elements: { userButtonAvatarBox: "h-6 w-6" },
             }}
-          />
+          >
+            <UserButton.MenuItems>
+              <UserButton.Link
+                label="Mis videos"
+                href={ownHandle ? `/perfil/${ownHandle}` : "/"}
+                labelIcon={<ProfileIcon className="h-4 w-4" />}
+              />
+            </UserButton.MenuItems>
+          </UserButton>
           <span className="text-[10px] font-medium">Perfil</span>
         </div>
       </Show>

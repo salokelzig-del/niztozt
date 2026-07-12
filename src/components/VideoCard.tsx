@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useClerk, useUser } from "@clerk/nextjs";
 import type { Comment, Video } from "@/data/videos";
+import { handleToSlug } from "@/lib/handle";
 import {
   CommentIcon,
   HeartIcon,
@@ -133,9 +135,13 @@ export default function VideoCard({
       )}
 
       <div className="absolute right-3 bottom-32 flex flex-col items-center gap-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-amber-400 bg-gradient-to-br from-blue-700 to-blue-950 text-sm font-bold text-white">
+        <Link
+          href={`/perfil/${handleToSlug(video.handle)}`}
+          aria-label={`Ver perfil de ${video.user}`}
+          className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-amber-400 bg-gradient-to-br from-blue-700 to-blue-950 text-sm font-bold text-white"
+        >
           {video.user.charAt(0)}
-        </div>
+        </Link>
 
         <button
           onClick={toggleLike}
@@ -165,7 +171,9 @@ export default function VideoCard({
       </div>
 
       <div className="absolute bottom-24 left-4 right-24 text-white">
-        <p className="font-bold text-base">{video.handle}</p>
+        <Link href={`/perfil/${handleToSlug(video.handle)}`} className="font-bold text-base">
+          {video.handle}
+        </Link>
         <p className="mt-1.5 text-sm leading-snug">{video.description}</p>
         <p className="mt-2 text-xs font-medium text-amber-300">{video.hashtags.join(" ")}</p>
         <div className="mt-2 flex items-center gap-2 text-xs text-white/80">
