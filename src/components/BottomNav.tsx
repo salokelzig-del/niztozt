@@ -45,10 +45,15 @@ export default function BottomNav({
         <HomeIcon className="h-6 w-6" />
         <span className="text-[10px] font-medium">Inicio</span>
       </Link>
-      <div className="pointer-events-auto flex flex-col items-center gap-0.5 text-white/60">
+      <Link
+        href="/descubrir"
+        className={`pointer-events-auto flex flex-col items-center gap-0.5 ${
+          pathname === "/descubrir" ? "text-amber-400" : "text-white/60"
+        }`}
+      >
         <SearchIcon className="h-6 w-6" />
         <span className="text-[10px] font-medium">Descubrir</span>
-      </div>
+      </Link>
       <button
         onClick={onUploadClick}
         aria-label="Subir video"
@@ -56,10 +61,15 @@ export default function BottomNav({
       >
         <PlusIcon className="h-5 w-5" />
       </button>
-      <div className="pointer-events-auto flex flex-col items-center gap-0.5 text-white/60">
+      <Link
+        href="/mensajes"
+        className={`pointer-events-auto flex flex-col items-center gap-0.5 ${
+          pathname.startsWith("/mensajes") ? "text-amber-400" : "text-white/60"
+        }`}
+      >
         <InboxIcon className="h-6 w-6" />
         <span className="text-[10px] font-medium">Bandeja</span>
-      </div>
+      </Link>
       <Show when="signed-in">
         <div className="pointer-events-auto flex flex-col items-center gap-0.5 text-white/60">
           <UserButton

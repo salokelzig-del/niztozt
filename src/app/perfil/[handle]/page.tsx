@@ -3,11 +3,12 @@ import { auth } from "@clerk/nextjs/server";
 import {
   getUserIdByHandle,
   getVideosByUserId,
+  getVideosByHandle,
   getLikedVideoIdsForUser,
   getFollowerCount,
   isFollowing,
 } from "@/lib/redis";
-import { ArrowLeftIcon } from "@/components/icons";
+import { ArrowLeftIcon, InboxIcon } from "@/components/icons";
 import AppShell from "@/components/AppShell";
 import VideoCard from "@/components/VideoCard";
 import FollowButton from "@/components/FollowButton";
@@ -24,12 +25,13 @@ export default async function ProfilePage({
 
   const { userId: viewerId } = await auth();
   const [videos, likedIds, followerCount, viewerIsFollowing] = await Promise.all([
-    authorUserId ? getVideosByUserId(authorUserId) : Promise.resolve([]),
+    authorUserId ? getVideosByUserId(authorUserId) : getVideosByHandle(handle),
     viewerId ? getLikedVideoIdsForUser(viewerId) : Promise.resolve([]),
     authorUserId ? getFollowerCount(authorUserId) : Promise.resolve(0),
     authorUserId && viewerId ? isFollowing(viewerId, authorUserId) : Promise.resolve(false),
   ]);
   const likedSet = new Set(likedIds);
+  const canMessage = Boolean(authorUserId && viewerId && authorUserId !== viewerId);
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-black">
@@ -44,15 +46,24 @@ export default async function ProfilePage({
           </Link>
           <p className="text-base font-bold text-white">@{handle}</p>
         </div>
-        {authorUserId && (
-          <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex items-center gap-2">
+          {canMessage && (
+            <Link
+              href={`/mensajes/${authorUserId}`}
+              aria-label="Enviar mensaje"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white"
+            >
+              <InboxIcon className="h-4 w-4" />
+            </Link>
+          )}
+          {authorUserId && (
             <FollowButton
               targetUserId={authorUserId}
               initialFollowing={viewerIsFollowing}
               initialFollowerCount={followerCount}
             />
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       {videos.length === 0 ? (

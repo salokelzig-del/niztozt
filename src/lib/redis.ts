@@ -15,6 +15,12 @@ const followersKey = (userId: string) => `nitzotz:user:${userId}:followers`;
 const profileKey = (userId: string) => `nitzotz:user:${userId}:profile`;
 const reportsKey = (id: string) => `nitzotz:video:${id}:reports`;
 const REPORTED_VIDEOS_KEY = "nitzotz:reported_videos";
+const userConvsKey = (userId: string) => `nitzotz:user:${userId}:convs`;
+const messagesKey = (convId: string) => `nitzotz:conv:${convId}:messages`;
+
+function convId(a: string, b: string): string {
+  return [a, b].sort().join("|");
+}
 
 const GRADIENTS = [
   "from-blue-950 via-slate-900 to-amber-900",
@@ -246,6 +252,117 @@ export async function getReportedVideos(): Promise<
   for (const video of videos) {
     const reportCount = await redis.scard(reportsKey(video.id));
     out.push({ video, reportCount });
+  }
+  return out;
+}
+
+export type AuthorResult = {
+  name: string;
+  handle: string;
+  userId?: string;
+  videoCount: number;
+};
+
+export async function searchAuthors(query: string): Promise<AuthorResult[]> {
+  const q = query.trim().toLowerCase();
+  const videos = await getFeedVideos();
+  const byHandle = new Map<string, AuthorResult>();
+  for (const v of videos) {
+    const existing = byHandle.get(v.handle);
+    if (existing) {
+      existing.videoCount++;
+    } else {
+      byHandle.set(v.handle, {
+        name: v.user,
+        handle: v.handle,
+        userId: v.userId,
+        videoCount: 1,
+      });
+    }
+  }
+  const all = [...byHandle.values()];
+  if (!q) return all;
+  return all.filter(
+    (a) => a.name.toLowerCase().includes(q) || a.handle.toLowerCase().includes(q)
+  );
+}
+
+export async function getVideosByHandle(handleSlug: string): Promise<Video[]> {
+  const videos = await getFeedVideos();
+  return videos.filter((v) => handleToSlug(v.handle) === handleSlug);
+}
+
+export type ChatMessage = {
+  id: string;
+  from: string;
+  fromName: string;
+  text: string;
+  ts: number;
+};
+
+export async function getUserDisplayInfo(
+  userId: string
+): Promise<{ name: string; handle: string } | null> {
+  const profile = await redis.hgetall<{ name: string; handle: string }>(
+    profileKey(userId)
+  );
+  if (profile?.name) return profile;
+  const videos = await getFeedVideos();
+  const own = videos.find((v) => v.userId === userId);
+  if (own) return { name: own.user, handle: own.handle };
+  return null;
+}
+
+export async function sendMessage(input: {
+  fromId: string;
+  fromName: string;
+  toId: string;
+  text: string;
+}): Promise<ChatMessage> {
+  const message: ChatMessage = {
+    id: crypto.randomUUID(),
+    from: input.fromId,
+    fromName: input.fromName,
+    text: input.text,
+    ts: Date.now(),
+  };
+  const cid = convId(input.fromId, input.toId);
+  await redis.rpush(messagesKey(cid), message);
+  await redis.zadd(userConvsKey(input.fromId), { score: message.ts, member: input.toId });
+  await redis.zadd(userConvsKey(input.toId), { score: message.ts, member: input.fromId });
+  return message;
+}
+
+export async function getMessages(a: string, b: string): Promise<ChatMessage[]> {
+  return redis.lrange<ChatMessage>(messagesKey(convId(a, b)), 0, -1);
+}
+
+export type ConversationSummary = {
+  partnerId: string;
+  partnerName: string;
+  partnerHandle: string;
+  lastMessage: string;
+  lastTs: number;
+};
+
+export async function getConversations(userId: string): Promise<ConversationSummary[]> {
+  const partnerIds = await redis.zrange<string[]>(userConvsKey(userId), 0, -1, {
+    rev: true,
+  });
+  const out: ConversationSummary[] = [];
+  for (const partnerId of partnerIds) {
+    const [info, lastRaw] = await Promise.all([
+      getUserDisplayInfo(partnerId),
+      redis.lindex(messagesKey(convId(userId, partnerId)), -1),
+    ]);
+    const last = lastRaw as ChatMessage | null;
+    out.push({
+      partnerId,
+      partnerName: info?.name || "Usuario",
+      partnerHandle: info?.handle || "",
+      lastMessage: last?.text || "",
+      lastTs: last?.ts || 0,
+    });
   }
   return out;
 }
