@@ -9,7 +9,7 @@ export default function Home() {
       <div className="pointer-events-none fixed left-4 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 flex items-center gap-1.5 text-amber-400">
         <span className="text-lg">✦</span>
         <span className="text-base font-bold tracking-wide text-white">
-          Nitzotz
+          Rega
         </span>
       </div>
       <AppShell>

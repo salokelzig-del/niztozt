@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nitzotz",
+  title: "Rega",
   description: "Videos cortos de contenido judío: tradición, humor, música e historia.",
 };
 
