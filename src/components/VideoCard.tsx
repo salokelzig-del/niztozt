@@ -18,6 +18,7 @@ import {
   TrashIcon,
 } from "./icons";
 import CommentsSheet from "./CommentsSheet";
+import ShareSheet from "./ShareSheet";
 
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
@@ -41,7 +42,7 @@ export default function VideoCard({
   const [muted, setMuted] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [reported, setReported] = useState(false);
-  const [shared, setShared] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -94,24 +95,8 @@ export default function VideoCard({
     setShowComments(true);
   }
 
-  async function share() {
-    const url = `${window.location.origin}/video/${video.id}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Rega", text: video.description, url });
-        return;
-      } catch {
-        // el usuario canceló el menú de compartir; no copiar nada
-        return;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setShared(true);
-      setTimeout(() => setShared(false), 2000);
-    } catch {
-      // sin permiso de portapapeles; no hay feedback que dar
-    }
+  function share() {
+    setShowShare(true);
   }
 
   async function addComment(text: string) {
@@ -231,10 +216,8 @@ export default function VideoCard({
           className="flex flex-col items-center gap-1"
           aria-label="Compartir"
         >
-          <ShareIcon className={`h-8 w-8 ${shared ? "text-amber-400" : "text-white"}`} />
-          <span className="text-xs font-semibold text-white">
-            {shared ? "¡Copiado!" : "Compartir"}
-          </span>
+          <ShareIcon className="h-8 w-8 text-white" />
+          <span className="text-xs font-semibold text-white">Compartir</span>
         </button>
 
         {isOwner ? (
@@ -283,6 +266,13 @@ export default function VideoCard({
         onClose={() => setShowComments(false)}
         comments={comments}
         onAddComment={addComment}
+      />
+
+      <ShareSheet
+        open={showShare}
+        onClose={() => setShowShare(false)}
+        url={`https://regatv.vercel.app/video/${video.id}`}
+        text={video.description}
       />
     </section>
   );
