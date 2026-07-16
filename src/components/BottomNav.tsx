@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Show, UserButton, useClerk, useUser } from "@clerk/nextjs";
@@ -21,9 +22,22 @@ export default function BottomNav({
   isAdmin?: boolean;
 }) {
   const clerk = useClerk();
-  const { user } = useUser();
+  const { user, isSignedIn } = useUser();
   const pathname = usePathname();
   const isHome = pathname === "/" || pathname === "/siguiendo";
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    const check = () =>
+      fetch("/api/conversations/unread")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => data && setUnread(data.count))
+        .catch(() => {});
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, [isSignedIn, pathname]);
 
   const ownHandle = user
     ? handleToSlug(
@@ -67,7 +81,14 @@ export default function BottomNav({
           pathname.startsWith("/mensajes") ? "text-amber-400" : "text-white/60"
         }`}
       >
-        <InboxIcon className="h-6 w-6" />
+        <span className="relative">
+          <InboxIcon className="h-6 w-6" />
+          {unread > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </span>
         <span className="text-[10px] font-medium">Bandeja</span>
       </Link>
       <Show when="signed-in">

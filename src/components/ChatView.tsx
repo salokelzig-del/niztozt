@@ -37,12 +37,18 @@ export default function ChatView({
   }, [messages]);
 
   useEffect(() => {
+    const markRead = () =>
+      fetch(`/api/conversations/${partnerId}/read`, { method: "POST" }).catch(() => {});
+    markRead();
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/conversations/${partnerId}/messages`);
         if (res.ok) {
           const data = await res.json();
-          setMessages(data.messages);
+          setMessages((prev) => {
+            if (data.messages.length > prev.length) markRead();
+            return data.messages;
+          });
         }
       } catch {
         // sin red; reintenta en el próximo ciclo

@@ -41,6 +41,7 @@ export default function VideoCard({
   const [muted, setMuted] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [reported, setReported] = useState(false);
+  const [shared, setShared] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -91,6 +92,26 @@ export default function VideoCard({
       return;
     }
     setShowComments(true);
+  }
+
+  async function share() {
+    const url = `${window.location.origin}/video/${video.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Rega", text: video.description, url });
+        return;
+      } catch {
+        // el usuario canceló el menú de compartir; no copiar nada
+        return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      // sin permiso de portapapeles; no hay feedback que dar
+    }
   }
 
   async function addComment(text: string) {
@@ -205,9 +226,15 @@ export default function VideoCard({
           <span className="text-xs font-semibold text-white">{formatCount(comments.length)}</span>
         </button>
 
-        <button className="flex flex-col items-center gap-1" aria-label="Compartir">
-          <ShareIcon className="h-8 w-8 text-white" />
-          <span className="text-xs font-semibold text-white">Compartir</span>
+        <button
+          onClick={share}
+          className="flex flex-col items-center gap-1"
+          aria-label="Compartir"
+        >
+          <ShareIcon className={`h-8 w-8 ${shared ? "text-amber-400" : "text-white"}`} />
+          <span className="text-xs font-semibold text-white">
+            {shared ? "¡Copiado!" : "Compartir"}
+          </span>
         </button>
 
         {isOwner ? (

@@ -17,6 +17,7 @@ const reportsKey = (id: string) => `nitzotz:video:${id}:reports`;
 const REPORTED_VIDEOS_KEY = "nitzotz:reported_videos";
 const userConvsKey = (userId: string) => `nitzotz:user:${userId}:convs`;
 const messagesKey = (convId: string) => `nitzotz:conv:${convId}:messages`;
+const lastReadKey = (userId: string) => `nitzotz:user:${userId}:lastread`;
 
 function convId(a: string, b: string): string {
   return [a, b].sort().join("|");
@@ -88,6 +89,11 @@ export async function getFeedVideos(): Promise<Video[]> {
 export async function getVideosByUserId(userId: string): Promise<Video[]> {
   const ids = await redis.lrange<string>(userVideosKey(userId), 0, -1);
   return hydrateVideos(ids);
+}
+
+export async function getVideoById(id: string): Promise<Video | null> {
+  const videos = await hydrateVideos([id]);
+  return videos[0] || null;
 }
 
 export async function getUserIdByHandle(handleSlug: string): Promise<string | null> {
@@ -343,12 +349,15 @@ export type ConversationSummary = {
   partnerHandle: string;
   lastMessage: string;
   lastTs: number;
+  unread: boolean;
 };
 
 export async function getConversations(userId: string): Promise<ConversationSummary[]> {
   const partnerIds = await redis.zrange<string[]>(userConvsKey(userId), 0, -1, {
     rev: true,
   });
+  const lastRead =
+    (await redis.hgetall<Record<string, number>>(lastReadKey(userId))) || {};
   const out: ConversationSummary[] = [];
   for (const partnerId of partnerIds) {
     const [info, lastRaw] = await Promise.all([
@@ -356,15 +365,28 @@ export async function getConversations(userId: string): Promise<ConversationSumm
       redis.lindex(messagesKey(convId(userId, partnerId)), -1),
     ]);
     const last = lastRaw as ChatMessage | null;
+    const unread = Boolean(
+      last && last.from === partnerId && last.ts > Number(lastRead[partnerId] || 0)
+    );
     out.push({
       partnerId,
       partnerName: info?.name || "Usuario",
       partnerHandle: info?.handle || "",
       lastMessage: last?.text || "",
       lastTs: last?.ts || 0,
+      unread,
     });
   }
   return out;
+}
+
+export async function markConversationRead(userId: string, partnerId: string): Promise<void> {
+  await redis.hset(lastReadKey(userId), { [partnerId]: Date.now() });
+}
+
+export async function getUnreadConversationCount(userId: string): Promise<number> {
+  const conversations = await getConversations(userId);
+  return conversations.filter((c) => c.unread).length;
 }
 
 export async function syncUserProfile(input: {

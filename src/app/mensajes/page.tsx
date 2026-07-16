@@ -68,12 +68,17 @@ export default async function MensajesPage() {
                   <span className="block truncate text-sm font-semibold text-white">
                     {c.partnerName}
                   </span>
-                  <span className="block truncate text-xs text-white/50">
+                  <span
+                    className={`block truncate text-xs ${
+                      c.unread ? "font-semibold text-white" : "text-white/50"
+                    }`}
+                  >
                     {c.lastMessage}
                   </span>
                 </span>
-                <span className="shrink-0 text-xs text-white/40">
-                  {formatTime(c.lastTs)}
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-xs text-white/40">{formatTime(c.lastTs)}</span>
+                  {c.unread && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
                 </span>
               </Link>
             </li>
