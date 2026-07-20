@@ -17,6 +17,7 @@ export type Video = {
   comments: Comment[];
   videoUrl?: string;
   userId?: string;
+  views?: number;
 };
 
 export const SEED_VIDEOS: Video[] = [

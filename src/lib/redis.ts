@@ -18,6 +18,8 @@ const REPORTED_VIDEOS_KEY = "nitzotz:reported_videos";
 const userConvsKey = (userId: string) => `nitzotz:user:${userId}:convs`;
 const messagesKey = (convId: string) => `nitzotz:conv:${convId}:messages`;
 const lastReadKey = (userId: string) => `nitzotz:user:${userId}:lastread`;
+const notificationsKey = (userId: string) => `nitzotz:user:${userId}:notifs`;
+const notifsReadKey = (userId: string) => `nitzotz:user:${userId}:notifs_read`;
 
 function convId(a: string, b: string): string {
   return [a, b].sort().join("|");
@@ -46,6 +48,7 @@ type StoredVideoMeta = {
   videoUrl: string;
   likes: number;
   userId?: string;
+  views?: number;
 };
 
 async function hydrateVideos(ids: string[]): Promise<Video[]> {
@@ -76,6 +79,7 @@ async function hydrateVideos(ids: string[]): Promise<Video[]> {
       likes: Number(meta.likes || 0),
       comments,
       userId: meta.userId,
+      views: Number(meta.views || 0),
     });
   }
   return out;
@@ -146,6 +150,13 @@ export async function createVideo(input: {
   await redis.lpush(userVideosKey(input.userId), id);
   await redis.set(handleOwnerKey(handleToSlug(input.handle)), input.userId);
   return { id, ...meta, comments: [] };
+}
+
+export async function incrementVideoViews(id: string): Promise<void> {
+  const exists = await redis.exists(videoKey(id));
+  if (exists) {
+    await redis.hincrby(videoKey(id), "views", 1);
+  }
 }
 
 export async function getLikedVideoIdsForUser(userId: string): Promise<string[]> {
@@ -293,6 +304,19 @@ export async function searchAuthors(query: string): Promise<AuthorResult[]> {
   );
 }
 
+export async function searchVideos(query: string): Promise<Video[]> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const videos = await getFeedVideos();
+  return videos.filter(
+    (v) =>
+      v.description.toLowerCase().includes(q) ||
+      v.category.toLowerCase().includes(q) ||
+      v.user.toLowerCase().includes(q) ||
+      v.hashtags.some((h) => h.toLowerCase().includes(q))
+  );
+}
+
 export async function getVideosByHandle(handleSlug: string): Promise<Video[]> {
   const videos = await getFeedVideos();
   return videos.filter((v) => handleToSlug(v.handle) === handleSlug);
@@ -387,6 +411,44 @@ export async function markConversationRead(userId: string, partnerId: string): P
 export async function getUnreadConversationCount(userId: string): Promise<number> {
   const conversations = await getConversations(userId);
   return conversations.filter((c) => c.unread).length;
+}
+
+export type Notification = {
+  id: string;
+  type: "follow" | "comment";
+  fromName: string;
+  fromHandle: string;
+  videoId?: string;
+  text?: string;
+  ts: number;
+};
+
+const NOTIF_LIMIT = 50;
+
+export async function addNotification(
+  targetUserId: string,
+  notif: Omit<Notification, "id" | "ts">
+): Promise<void> {
+  const full: Notification = { ...notif, id: crypto.randomUUID(), ts: Date.now() };
+  await redis.lpush(notificationsKey(targetUserId), full);
+  await redis.ltrim(notificationsKey(targetUserId), 0, NOTIF_LIMIT - 1);
+}
+
+export async function getNotifications(userId: string): Promise<Notification[]> {
+  return redis.lrange<Notification>(notificationsKey(userId), 0, -1);
+}
+
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  const [notifs, lastRead] = await Promise.all([
+    redis.lrange<Notification>(notificationsKey(userId), 0, -1),
+    redis.get<number>(notifsReadKey(userId)),
+  ]);
+  const cutoff = Number(lastRead || 0);
+  return notifs.filter((n) => n.ts > cutoff).length;
+}
+
+export async function markNotificationsRead(userId: string): Promise<void> {
+  await redis.set(notifsReadKey(userId), Date.now());
 }
 
 export async function syncUserProfile(input: {

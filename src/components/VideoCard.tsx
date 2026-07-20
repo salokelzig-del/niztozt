@@ -8,6 +8,7 @@ import type { Comment, Video } from "@/data/videos";
 import { handleToSlug } from "@/lib/handle";
 import {
   CommentIcon,
+  EyeIcon,
   FlagIcon,
   HeartIcon,
   MusicNoteIcon,
@@ -51,21 +52,26 @@ export default function VideoCard({
   useEffect(() => {
     const videoEl = videoRef.current;
     const sectionEl = sectionRef.current;
-    if (!videoEl || !sectionEl) return;
+    if (!sectionEl) return;
 
+    let viewCounted = false;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          videoEl.play().catch(() => {});
+          videoEl?.play().catch(() => {});
+          if (!viewCounted) {
+            viewCounted = true;
+            fetch(`/api/videos/${video.id}/view`, { method: "POST" }).catch(() => {});
+          }
         } else {
-          videoEl.pause();
+          videoEl?.pause();
         }
       },
       { threshold: 0.6 }
     );
     observer.observe(sectionEl);
     return () => observer.disconnect();
-  }, []);
+  }, [video.id]);
 
   async function toggleLike() {
     if (!isSignedIn) {
@@ -258,6 +264,10 @@ export default function VideoCard({
         <div className="mt-2 flex items-center gap-2 text-xs text-white/80">
           <MusicNoteIcon className="h-3.5 w-3.5" />
           <span>{video.music}</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-white/60">
+          <EyeIcon className="h-3.5 w-3.5" />
+          <span>{formatCount(video.views || 0)} vistas</span>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addComment } from "@/lib/redis";
+import { addComment, addNotification, getVideoById } from "@/lib/redis";
 import { getAuthedDisplayUser } from "@/lib/authUser";
 
 export async function POST(
@@ -19,6 +19,19 @@ export async function POST(
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }
 
-  const comment = await addComment(id, { user: authedUser.name, text: text.trim() });
+  const trimmed = text.trim();
+  const comment = await addComment(id, { user: authedUser.name, text: trimmed });
+
+  const video = await getVideoById(id);
+  if (video?.userId && video.userId !== authedUser.userId) {
+    await addNotification(video.userId, {
+      type: "comment",
+      fromName: authedUser.name,
+      fromHandle: authedUser.handle,
+      videoId: id,
+      text: trimmed,
+    });
+  }
+
   return NextResponse.json(comment);
 }

@@ -1,6 +1,7 @@
 import FollowingFeed from "@/components/FollowingFeed";
 import AppShell from "@/components/AppShell";
 import FeedTabs from "@/components/FeedTabs";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function SiguiendoPage() {
   return (
@@ -12,6 +13,9 @@ export default function SiguiendoPage() {
         <span className="text-base font-bold tracking-wide text-white">
           Rega
         </span>
+      </div>
+      <div className="fixed right-4 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30">
+        <NotificationBell />
       </div>
       <AppShell>
         <FollowingFeed />

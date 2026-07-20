@@ -15,8 +15,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://regatv.vercel.app"),
   title: "Rega",
   description: "Videos cortos de contenido judío: tradición, humor, música e historia.",
+  openGraph: {
+    siteName: "Rega",
+    title: "Rega",
+    description: "Videos cortos de contenido judío: tradición, humor, música e historia.",
+    images: ["/logo.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({
