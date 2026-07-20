@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.4",
     "@clerk/localizations": "^4.13.1",
     "@clerk/nextjs": "^7.5.15",
     "@upstash/redis": "^1.38.0",

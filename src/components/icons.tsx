@@ -189,6 +189,18 @@ export function PlusIcon({ className }: IconProps) {
   );
 }
 
+export function SparkChatIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12a8.5 8.5 0 0 1-12.4 7.55L3 21l1.45-4.6A8.5 8.5 0 1 1 21 12Z"
+      />
+    </svg>
+  );
+}
+
 export function BellIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>

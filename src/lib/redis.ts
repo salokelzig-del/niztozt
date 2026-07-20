@@ -20,6 +20,8 @@ const messagesKey = (convId: string) => `nitzotz:conv:${convId}:messages`;
 const lastReadKey = (userId: string) => `nitzotz:user:${userId}:lastread`;
 const notificationsKey = (userId: string) => `nitzotz:user:${userId}:notifs`;
 const notifsReadKey = (userId: string) => `nitzotz:user:${userId}:notifs_read`;
+const rabinoUsageKey = (userId: string, day: string) =>
+  `nitzotz:user:${userId}:rabino:${day}`;
 
 function convId(a: string, b: string): string {
   return [a, b].sort().join("|");
@@ -449,6 +451,21 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
 
 export async function markNotificationsRead(userId: string): Promise<void> {
   await redis.set(notifsReadKey(userId), Date.now());
+}
+
+const RABINO_DAILY_LIMIT = 20;
+
+export async function checkAndCountRabinoUsage(
+  userId: string
+): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+  const key = rabinoUsageKey(userId, day);
+  const used = await redis.incr(key);
+  if (used === 1) {
+    // primera consulta del día: que la clave expire en 48h para no acumular basura
+    await redis.expire(key, 60 * 60 * 48);
+  }
+  return { allowed: used <= RABINO_DAILY_LIMIT, used, limit: RABINO_DAILY_LIMIT };
 }
 
 export async function syncUserProfile(input: {

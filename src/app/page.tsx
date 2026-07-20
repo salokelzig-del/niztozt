@@ -2,6 +2,7 @@ import Feed from "@/components/Feed";
 import AppShell from "@/components/AppShell";
 import FeedTabs from "@/components/FeedTabs";
 import NotificationBell from "@/components/NotificationBell";
+import RabinoButton from "@/components/RabinoButton";
 
 export default function Home() {
   return (
@@ -17,6 +18,7 @@ export default function Home() {
       <div className="fixed right-4 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30">
         <NotificationBell />
       </div>
+      <RabinoButton />
       <AppShell>
         <Feed />
       </AppShell>
